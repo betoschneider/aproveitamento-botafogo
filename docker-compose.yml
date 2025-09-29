@@ -9,5 +9,5 @@ services:
     volumes:
       - .:/app  # monta a pasta atual no container
     working_dir: /app
-    command: streamlit run app.py --server.port=8505 --server.address=0.0.0.0
+    command: streamlit run main.py --server.port=8505 --server.address=0.0.0.0
     restart: always
