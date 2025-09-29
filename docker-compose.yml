@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  brasileirao:
+    build: .
+    image: aproveita_botafogo
+    ports:
+      - "8505:8505"
+    volumes:
+      - .:/app  # monta a pasta atual no container
+    working_dir: /app
+    command: streamlit run app.py --server.port=8505 --server.address=0.0.0.0
+    restart: always
