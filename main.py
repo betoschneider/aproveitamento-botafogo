@@ -32,7 +32,6 @@ def main():
     if camp_selecionado:
         df = df[df['Campeonato'].isin(camp_selecionado)]
 
-    
     df['Partida'] = (
         df.groupby(['Treinador']).cumcount() + 1
     )
@@ -53,53 +52,56 @@ def main():
 
     min_partidas = df['Partida'].min()
     max_partidas = df['Partida'].max()
+    
+    tab1, tab2, tab3 = st.tabs(["Aproveitamento", "Gols marcados", "Gols sofridos"])
+    
+    with tab1:    
+        # Aproveitamento ao longo do tempo
+        st.subheader("Aproveitamento ao longo do tempo")
 
-    # Aproveitamento ao longo do tempo
-    st.subheader("Aproveitamento ao longo do tempo")
-
-    chart = (
-        alt.Chart(df)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
-            y=alt.Y("Aproveitamento:Q", title="Aproveitamento (%)"),
-            color="Treinador:N",
+        chart = (
+            alt.Chart(df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
+                y=alt.Y("Aproveitamento:Q", title="Aproveitamento (%)"),
+                color="Treinador:N",
+            )
+            .properties(height=700)
         )
-        .properties(height=700)
-    )
-    st.altair_chart(chart, use_container_width=True)
-    st.markdown("---")
+        st.altair_chart(chart, use_container_width=True)
+        
+    with tab2:
+        # Média de gols marcados ao longo do tempo
+        st.subheader("Média de gols marcados ao longo do tempo")
 
-    # Média de gols marcados ao longo do tempo
-    st.subheader("Média de gols marcados ao longo do tempo")
-
-    chart = (
-        alt.Chart(df)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
-            y=alt.Y("Média de gols marcados:Q", title="Gols marcados"),
-            color="Treinador:N",
+        chart = (
+            alt.Chart(df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
+                y=alt.Y("Média de gols marcados:Q", title="Gols marcados"),
+                color="Treinador:N",
+            )
+            .properties(height=700)
         )
-        .properties(height=700)
-    )
-    st.altair_chart(chart, use_container_width=True)
-    st.markdown("---")
+        st.altair_chart(chart, use_container_width=True)
+    
+    with tab3:
+        # Média de gols sofridos ao longo do tempo
+        st.subheader("Média de gols sofridos ao longo do tempo")
 
-    # Média de gols sofridos ao longo do tempo
-    st.subheader("Média de gols sofridos ao longo do tempo")
-
-    chart = (
-        alt.Chart(df)
-        .mark_line(point=True)
-        .encode(
-            x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
-            y=alt.Y("Média de gols sofridos:Q", title="Gols sofridos"),
-            color="Treinador:N",
+        chart = (
+            alt.Chart(df)
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("Partida:Q", scale=alt.Scale(domain=[min_partidas, max_partidas]), title="Partida"),
+                y=alt.Y("Média de gols sofridos:Q", title="Gols sofridos"),
+                color="Treinador:N",
+            )
+            .properties(height=700)
         )
-        .properties(height=700)
-    )
-    st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, use_container_width=True)
     st.markdown("---")
     
     # Tabela resumo por treinador
