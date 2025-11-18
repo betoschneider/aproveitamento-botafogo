@@ -14,4 +14,4 @@ COPY . .
 EXPOSE 8505
 
 # Comando para iniciar o Streamlit
-CMD ["streamlit", "run", "main.py", "--server.port=8508", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "main.py", "--server.port=8505", "--server.address=0.0.0.0"]

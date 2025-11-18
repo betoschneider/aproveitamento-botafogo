@@ -7,7 +7,7 @@ services:
     container_name: api-aproveitamento
     restart: always
     volumes:
-      - botafogo_data:/data  # Volume persistente para o banco
+      - ./api/botafogo.db:/data/botafogo.db  # usa o arquivo local
     ports:
       - "8000:8000"
     environment:
@@ -21,7 +21,7 @@ services:
     container_name: worker-aproveitamento
     restart: always
     volumes:
-      - botafogo_data:/data  # Mesmo volume do banco
+      - ./api/botafogo.db:/data/botafogo.db  # mesmo arquivo
     environment:
       - DB_PATH=/data/botafogo.db
     command: python worker.py
@@ -43,11 +43,6 @@ services:
       - app-network
     depends_on:
       - api
-
-# Volume nomeado para persistência do banco de dados
-volumes:
-  botafogo_data:
-    driver: local
 
 # Rede para comunicação entre containers
 networks:
