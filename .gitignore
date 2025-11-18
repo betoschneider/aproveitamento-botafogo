@@ -2,5 +2,8 @@
 /api/botafogo.db
 /api/__pycache__/
 *.db
-api/botafogo.db
+/api/botafogo.db
+/api/data
+/api/venv
+/front/venv
 *botafogo.db

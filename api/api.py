@@ -40,7 +40,8 @@ def root():
             "tecnicos": "/tecnicos",
             "estatisticas": "/estatisticas",
             "estatisticas_por_ano": "/estatisticas/ano/{ano}",
-            "estatisticas_por_tecnico": "/estatisticas/tecnico/{tecnico_id}"
+            "estatisticas_por_tecnico": "/estatisticas/tecnico/{tecnico_id}",
+            "ultima_partida": "/ultima_partida",
         }
     }
 
@@ -411,6 +412,47 @@ def get_estatisticas_tecnico(tecnico_id: int):
             "estatisticas_por_competicao": stats_competicao
         }
 
+@app.get("/ultima_partida")
+def get_ultima_partida():
+    """
+    Retorna a última partida registrada
+    """
+    with get_db_connection() as conn:
+        conn.row_factory = dict_factory
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT 
+                p.id,
+                p.data,
+                p.dia,
+                p.competicao,
+                p.rodada,
+                p.adversario,
+                p.local,
+                p.gols,
+                p.gols_adversario,
+                p.resultado,
+                p.publico,
+                p.ranking,
+                p.ranking_adversario,
+                t.id AS tecnico_id,
+                t.nome AS tecnico 
+            FROM partidas p
+            LEFT JOIN tecnicos t
+                ON t.dt_inicio <= p.data
+               AND (t.dt_fim IS NULL OR t.dt_fim >= p.data)
+            ORDER BY p.data DESC
+            LIMIT 1
+        """
+        
+        cursor.execute(query)
+        ultima_partida = cursor.fetchone()
+        
+        if not ultima_partida:
+            raise HTTPException(status_code=404, detail="Nenhuma partida encontrada")
+        
+        return ultima_partida
 
 if __name__ == "__main__":
     import uvicorn
