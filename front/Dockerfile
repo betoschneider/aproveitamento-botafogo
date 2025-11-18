@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Expor a porta 8508
-EXPOSE 8508
+# Expor a porta 8505
+EXPOSE 8505
 
 # Comando para iniciar o Streamlit
 CMD ["streamlit", "run", "main.py", "--server.port=8508", "--server.address=0.0.0.0"]

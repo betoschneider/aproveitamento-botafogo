@@ -36,7 +36,7 @@ services:
     container_name: streamlit-aproveitamento
     restart: always
     ports:
-      - "8508:8508"
+      - "8505:8505"
     environment:
       - API_BASE_URL=http://api:8000
     networks:
