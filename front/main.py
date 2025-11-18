@@ -25,7 +25,6 @@ def fetch_partidas_from_api(page_size: int = 500):
         df = pd.DataFrame(partidas)
 
         # Renomear colunas da API para o que o frontend espera
-        # (ajuste se o CSV original usava outros nomes)
         df.rename(
             columns={
                 "data": "Data",
@@ -38,10 +37,6 @@ def fetch_partidas_from_api(page_size: int = 500):
             },
             inplace=True,
         )
-
-        # Se quiser simular exatamente o CSV, pode criar colunas extras aqui
-        # df["xxx"] = None
-        # df["Placar_"] = df["Gol Botafogo"].astype(str) + "x" + df["Gol Adversário"].astype(str)
 
         return df
 
@@ -57,10 +52,9 @@ def main():
     st.set_page_config(
         page_title="Botafogo | Aproveitamento dos treinadores",
         page_icon="⚽",
-        # layout="wide",
     )
 
-    # df = pd.read_csv('data.csv')
+
     df = fetch_partidas_from_api()
 
     if df is None or df.empty:
@@ -70,10 +64,18 @@ def main():
     # Se ainda existir no df por algum motivo, removemos
     df = df.drop(columns=['xxx', 'Placar_'], errors='ignore')
 
+    # Substituir NaN por 0
+    df.fillna(0, inplace=True)
+
+    # Definir Resultado com base nos gols
+    df["Resultado"] = df.apply(
+        lambda row: "V"
+        if row["Gol Botafogo"] > row["Gol Adversário"]
+        else ("E" if row["Gol Botafogo"] == row["Gol Adversário"] else "D"),
+        axis=1,
+    )
+
     # Ajuste de Local:
-    # sua API guarda provavelmente "Casa"/"Fora".
-    # O código original esperava "(C)" e "(F)" e mapeava pra "Casa"/"Fora".
-    # Agora podemos pular o mapeamento ou adaptar:
     mapa_local = {
         "(C)": "Casa",
         "(F)": "Fora",
@@ -92,8 +94,9 @@ def main():
 
     # título e filtros
     dt_atualizacao = df["Data"].max()
+    
     temporada = dt_atualizacao.year
-    st.title(f"Botafogo | Aproveitamento dos treinadores {temporada}")
+    st.title(f"Botafogo - Aproveitamento dos treinadores")
 
     campeonatos = np.sort(df["Campeonato"].unique())
     camp_selecionado = st.pills(
