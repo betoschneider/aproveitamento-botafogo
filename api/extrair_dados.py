@@ -5,9 +5,10 @@ import datetime
 from datetime import date
 import sqlite3
 from contextlib import contextmanager
+import os
 
 # Constantes
-DB_PATH = "botafogo.db"
+DB_PATH = os.getenv("DB_PATH", "/data/botafogo.db")
 
 @contextmanager
 def get_db_connection():

@@ -4,8 +4,9 @@ import sqlite3
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 from datetime import date
+import os
 
-DB_PATH = "botafogo.db"
+DB_PATH = os.getenv("DB_PATH", "/data/botafogo.db")
 
 app = FastAPI(
     title="API Botafogo - Partidas e Técnicos",

@@ -1,13 +1,55 @@
 version: "3.9"
 
 services:
-  brasileirao:
-    build: .
-    image: aproveita_botafogo
-    ports:
-      - "8505:8505"
-    volumes:
-      - .:/app  # monta a pasta atual no container
-    working_dir: /app
-    command: streamlit run main.py --server.port=8505 --server.address=0.0.0.0
+  # Serviço da API FastAPI
+  api:
+    build: ./api
+    container_name: api-aproveitamento
     restart: always
+    volumes:
+      - botafogo_data:/data  # Volume persistente para o banco
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_PATH=/data/botafogo.db
+    networks:
+      - app-network
+
+  # Serviço Worker para extração de dados
+  worker:
+    build: ./api
+    container_name: worker-aproveitamento
+    restart: always
+    volumes:
+      - botafogo_data:/data  # Mesmo volume do banco
+    environment:
+      - DB_PATH=/data/botafogo.db
+    command: python worker.py
+    networks:
+      - app-network
+    depends_on:
+      - api
+
+  # Serviço do Streamlit (Frontend)
+  web:
+    build: ./front
+    container_name: streamlit-aproveitamento
+    restart: always
+    ports:
+      - "8508:8508"
+    environment:
+      - API_BASE_URL=http://api:8000
+    networks:
+      - app-network
+    depends_on:
+      - api
+
+# Volume nomeado para persistência do banco de dados
+volumes:
+  botafogo_data:
+    driver: local
+
+# Rede para comunicação entre containers
+networks:
+  app-network:
+    driver: bridge

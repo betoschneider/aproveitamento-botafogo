@@ -4,7 +4,7 @@ import altair as alt
 import streamlit as st
 import requests
 
-API_BASE_URL = "http://localhost:8000"  # ajuste se rodar em outro host/porta
+API_BASE_URL = "http://api:8000"  # ajuste se rodar em outro host/porta
 
 def fetch_partidas_from_api(page_size: int = 500):
     """
