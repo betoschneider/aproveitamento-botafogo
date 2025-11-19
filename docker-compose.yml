@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # Serviço da API FastAPI
   api:

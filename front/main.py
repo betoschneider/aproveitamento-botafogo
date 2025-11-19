@@ -3,17 +3,38 @@ import numpy as np
 import altair as alt
 import streamlit as st
 import requests
+from datetime import date
 
-API_BASE_URL = "http://api:8000"  # ajuste se rodar em outro host/porta
+API_BASE_URL = "http://api:8000"  
 
-def fetch_partidas_from_api(page_size: int = 500):
+def fetch_ultima_partida_date():
+    """
+    Busca a data da última partida registrada na API.
+    """
+    try:
+        response = requests.get(f"{API_BASE_URL}/partidas/ultima")
+        response.raise_for_status()
+        data = response.json()
+        ultima_data_str = data.get("data")
+        if ultima_data_str:
+            return pd.to_datetime(ultima_data_str, format="%Y-%m-%d")
+        else:
+            st.warning("API não retornou a data da última partida.")
+            return None
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao buscar dados da API: {e}")
+        return None
+    except ValueError as e:
+        st.error(f"Erro ao processar dados da API: {e}")
+        return None
+
+def fetch_partidas_from_api(ano, page_size: int = 500):
     """
     Busca partidas da API e retorna um DataFrame no formato esperado pelo app.
     """
     try:
-        # pega muitas partidas de uma vez; ajuste se precisar de paginação real
         params = {"page": 1, "page_size": page_size}
-        response = requests.get(f"{API_BASE_URL}/partidas", params=params)
+        response = requests.get(f"{API_BASE_URL}/partidas/ano/{ano}", params=params)
         response.raise_for_status()
         data = response.json()
 
@@ -50,12 +71,27 @@ def fetch_partidas_from_api(page_size: int = 500):
 
 def main():
     st.set_page_config(
-        page_title="Botafogo | Aproveitamento dos treinadores",
+        page_title="Treinadores Botafogo",
         page_icon="⚽",
     )
 
+    # Verificar a data da última partida na API
+    ultima_data = fetch_ultima_partida_date()
+    if ultima_data is None:
+        ultima_data = date.today()
+    
+    ano_para_busca = ultima_data.year
 
-    df = fetch_partidas_from_api()
+    st.title(f"Botafogo - Análise dos treinadores")
+    st.write(f"Data da última partida registrada: {ultima_data.strftime('%d/%m/%Y')}")
+
+    option = st.selectbox(
+        "Selecione a temporada para análise:",
+        options=list(range(ano_para_busca, 2024 - 1, -1)),
+        index=0,
+    )
+
+    df = fetch_partidas_from_api(option)
 
     if df is None or df.empty:
         st.error("Não foi possível carregar os dados da API.")
@@ -92,12 +128,10 @@ def main():
     df.sort_values(by=["Data"], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    # título e filtros
-    dt_atualizacao = df["Data"].max()
-    
-    temporada = dt_atualizacao.year
-    st.title(f"Botafogo - Aproveitamento dos treinadores")
-
+    df["Campeonato"] = df["Campeonato"].apply(
+        lambda x: x.replace("Campeonato ", "").replace(" - Taça Rio", "").strip()
+    )
+    # Filtros
     campeonatos = np.sort(df["Campeonato"].unique())
     camp_selecionado = st.pills(
         "Selecione um campeonato:", campeonatos, selection_mode="multi"
@@ -114,11 +148,11 @@ def main():
     df["Pontos acumulados"] = df.groupby(["Treinador"])["Pontos"].cumsum()
     df["Aproveitamento"] = (
         df["Pontos acumulados"] / (df["Partida"] * 3) * 100
-    ).round(2)
+    ).round(1)
     df["Gols marcados"] = df.groupby(["Treinador"])["Gol Botafogo"].cumsum()
     df["Gols sofridos"] = df.groupby(["Treinador"])["Gol Adversário"].cumsum()
-    df["Média de gols marcados"] = (df["Gols marcados"] / df["Partida"]).round(2)
-    df["Média de gols sofridos"] = (df["Gols sofridos"] / df["Partida"]).round(2)
+    df["Média de gols marcados"] = (df["Gols marcados"] / df["Partida"]).round(1)
+    df["Média de gols sofridos"] = (df["Gols sofridos"] / df["Partida"]).round(1)
 
     min_partidas = df["Partida"].min()
     max_partidas = df["Partida"].max()
@@ -188,20 +222,125 @@ def main():
 
     # Tabela resumo por treinador
     df_resumo = df.loc[df.groupby("Treinador")["Partida"].idxmax()]
-    colunas = [
+    
+    # Calcular vitórias, empates e derrotas por treinador
+    resultados_por_treinador = df.groupby("Treinador")["Resultado"].value_counts().unstack(fill_value=0)
+    resultados_por_treinador = resultados_por_treinador.rename(columns={"V": "Vitórias", "E": "Empates", "D": "Derrotas"})
+    
+    # Garantir que todas as colunas existam (caso algum treinador não tenha V, E ou D)
+    for col in ["Vitórias", "Empates", "Derrotas"]:
+        if col not in resultados_por_treinador.columns:
+            resultados_por_treinador[col] = 0
+    
+    # Merge com o resumo
+    df_resumo = df_resumo.merge(resultados_por_treinador, on="Treinador", how="left")
+    
+    df_resumo = df_resumo[
+        [
+            "Treinador",
+            "Partida",
+            "Vitórias",
+            "Empates",
+            "Derrotas",
+            "Aproveitamento",
+            "Média de gols marcados",
+            "Média de gols sofridos",
+        ]
+    ].rename(
+        columns={
+            "Partida": "Partidas",
+            "Média de gols marcados": "Gols marcados/jogo",
+            "Média de gols sofridos": "Gols sofridos/jogo",
+        }
+    )
+
+    df_resumo["Resultados"] = (
+        df_resumo["Vitórias"].astype(str) + "V, " +
+        df_resumo["Empates"].astype(str) + "E, " +
+        df_resumo["Derrotas"].astype(str) + "D"
+    )
+
+    df_resumo.sort_values(by="Aproveitamento", ascending=False, inplace=True)
+
+    df_resumo["Aproveitamento"] = df_resumo["Aproveitamento"].round(1).astype(str) + " %"
+    df_resumo["Gols marcados/jogo"] = df_resumo["Gols marcados/jogo"].astype(str)
+    df_resumo["Gols sofridos/jogo"] = df_resumo["Gols sofridos/jogo"].astype(str)
+    df_resumo["Partidas"] = df_resumo["Partidas"].astype(int).astype(str)
+
+    colunas_resumo = [
         "Treinador",
-        "Partida",
+        "Partidas",
+        "Resultados",
         "Aproveitamento",
-        "Média de gols marcados",
-        "Média de gols sofridos",
+        "Gols marcados/jogo",
+        "Gols sofridos/jogo",
     ]
 
     st.subheader("Resumo por treinador")
 
     st.dataframe(
-        df_resumo[colunas]
-        .sort_values(by="Aproveitamento", ascending=False)
+        df_resumo[colunas_resumo]
         .reset_index(drop=True),
+        hide_index=True,
+    )
+
+    st.markdown("---")
+
+    # Tabela de partidas
+    df_partidas = df[
+        [
+            "Treinador",
+            "Data",
+            "Campeonato",
+            "rodada",
+            "Local",
+            "adversario",
+            "Gol Botafogo",
+            "Gol Adversário",
+            "Resultado",
+            "publico",
+        ]
+    ].rename(
+        columns={
+            "Gol Botafogo": "Gols marcados",
+            "Gol Adversário": "Gols sofridos",
+            "rodada": "Rodada",
+            "adversario": "Adversário",
+            "publico": "Público",
+        }
+    ).sort_values(by="Data", ascending=False).reset_index(drop=True)
+
+    # Formatações
+    df_partidas["Data"] = df_partidas["Data"].dt.strftime("%d/%m/%Y")
+
+    def format_publico(x):
+        try:
+            if pd.notnull(x):
+                return f"{int(float(x)):,}".replace(",", ".")
+            return "N/A"
+        except (ValueError, TypeError):
+            return "N/A"
+
+    df_partidas["Público"] = df_partidas["Público"].apply(format_publico)
+    df_partidas["Rodada"] = df_partidas["Rodada"].replace(0, "N/A")
+    df_partidas["Placar"] = df_partidas["Gols marcados"].astype(int).astype(str) + " x " + df_partidas["Gols sofridos"].astype(int).astype(str)
+    df_partidas["Resultado"] = df_partidas["Resultado"].map({"V": "🟢 Vitória", "E": "⚪ Empate", "D": "🔴 Derrota"})
+    df_partidas = df_partidas[
+        [
+            "Treinador",
+            "Data",
+            "Campeonato",
+            "Rodada",
+            "Local",
+            "Adversário",
+            "Placar",
+            "Resultado",
+        ]
+    ]
+
+    st.subheader("Partidas")    
+    st.dataframe(
+        df_partidas,
         hide_index=True,
     )
 

@@ -35,13 +35,13 @@ def root():
         "message": "API Botafogo - Partidas e Técnicos",
         "endpoints": {
             "partidas": "/partidas",
+            "ultima_partida": "/partidas/ultima",
             "partidas_por_ano": "/partidas/ano/{ano}",
             "partidas_por_tecnico": "partidas/tecnico/{tecnico_id}",
             "tecnicos": "/tecnicos",
             "estatisticas": "/estatisticas",
             "estatisticas_por_ano": "/estatisticas/ano/{ano}",
             "estatisticas_por_tecnico": "/estatisticas/tecnico/{tecnico_id}",
-            "ultima_partida": "/ultima_partida",
         }
     }
 
@@ -412,7 +412,7 @@ def get_estatisticas_tecnico(tecnico_id: int):
             "estatisticas_por_competicao": stats_competicao
         }
 
-@app.get("/ultima_partida")
+@app.get("/partidas/ultima")
 def get_ultima_partida():
     """
     Retorna a última partida registrada
